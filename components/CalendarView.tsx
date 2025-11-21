@@ -4,9 +4,10 @@ import { Reservation, ResourceType } from '../types';
 interface Props {
   reservations: Reservation[];
   onSelectDate: (date: string) => void;
+  isAdmin?: boolean;
 }
 
-export const CalendarView: React.FC<Props> = ({ reservations, onSelectDate }) => {
+export const CalendarView: React.FC<Props> = ({ reservations, onSelectDate, isAdmin = false }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // Utilities
@@ -72,7 +73,9 @@ export const CalendarView: React.FC<Props> = ({ reservations, onSelectDate }) =>
           const isToday = cellDate.getTime() === today.getTime();
           const isPast = cellDate < today;
           const isTooFar = cellDate > maxBookableDate;
-          const isDisabled = isPast || isTooFar;
+          
+          // Disable if past, OR if too far AND NOT admin
+          const isDisabled = isPast || (!isAdmin && isTooFar);
 
           // Count types
           const comedorCount = items.filter(r => r.type === ResourceType.Comedor).length;
