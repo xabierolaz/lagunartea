@@ -1,3 +1,4 @@
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { CalendarView } from './components/CalendarView';
@@ -36,8 +37,8 @@ const App: React.FC = () => {
   useEffect(() => {
     refreshData();
     
-    // Opcional: Polling simple para "tiempo real" rudimentario si no se usan suscripciones
-    const interval = setInterval(refreshData, 30000); // Refrescar cada 30s
+    // Opcional: Polling simple para "tiempo real" rudimentario
+    const interval = setInterval(refreshData, 30000); 
     return () => clearInterval(interval);
   }, []);
 
@@ -84,7 +85,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Helpers for sorting reservations logically (Meals first, then times)
+  // Helpers for sorting reservations logically
   const getSortableTime = (t: string) => {
     const map: Record<string, string> = {
       'Almuerzo': '10:00',
@@ -94,19 +95,12 @@ const App: React.FC = () => {
     return map[t] || t;
   };
 
-  // Filter reservations for modal details
   const selectedDateReservations = reservations
     .filter(r => r.date === selectedDate)
     .sort((a, b) => getSortableTime(a.startTime).localeCompare(getSortableTime(b.startTime)));
 
-  const getMemberName = (id: number) => {
-    const m = members.find(x => x.id === id);
-    return m ? `${m.firstName} ${m.lastName}` : 'Desconocido';
-  };
-
   const getKitchenServicesText = (res: Reservation) => {
     if (!res.kitchenServices || res.kitchenServices.length === 0) return '';
-    // Shorten names for display
     const shortNames = res.kitchenServices.map(s => s.replace('Barbacoa', 'BBQ').replace('Horno', 'H'));
     return ` + 🔥 ${shortNames.join(', ')}`;
   };
