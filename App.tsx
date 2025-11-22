@@ -105,6 +105,11 @@ const App: React.FC = () => {
     return ` + 🔥 ${shortNames.join(', ')}`;
   };
 
+  const getSpacesText = (res: Reservation) => {
+    if (!res.spaces || res.spaces.length === 0) return '';
+    return res.spaces.join(', ');
+  };
+
   return (
     <div className="min-h-screen pb-20 relative">
       {/* Background Logo */}
@@ -210,14 +215,14 @@ const App: React.FC = () => {
                           <a href={`tel:${member.phone.replace(/\s/g, '')}`} className="text-gray-400 text-xs font-normal hover:text-primary transition-colors flex items-center gap-0.5">
                             <span>📞</span> {member.phone}
                           </a>
-                        )}
-                      </div>
-                      {r.type === ResourceType.Comedor && (
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          {r.space} · {r.diners} pers. {r.memberDiners ? `(${r.memberDiners} socios)` : ''}
-                          {getKitchenServicesText(r)}
-                        </div>
                       )}
+                    </div>
+                    {r.type === ResourceType.Comedor && (
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {getSpacesText(r)} · {r.diners} pers. {r.memberDiners ? `(${r.memberDiners} socios)` : ''}
+                        {getKitchenServicesText(r)}
+                      </div>
+                    )}
                     </div>
                     {isAdmin && (
                       <button 

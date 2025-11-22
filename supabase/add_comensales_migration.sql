@@ -19,10 +19,18 @@ create table if not exists public.reservations (
   diners integer,
   member_diners integer,
   space text,
+  spaces text[],
   kitchen_services text[],
   light_included boolean default false,
   created_at bigint not null
 );
+
+-- Ensure multi-space support even if table existed before
+alter table public.reservations add column if not exists spaces text[];
+-- migrate legacy single space into array on first run
+update public.reservations
+set spaces = array[space]
+where spaces is null and space is not null;
 
 -- Consumptions
 create table if not exists public.consumptions (

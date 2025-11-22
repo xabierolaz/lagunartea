@@ -22,7 +22,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => 
   const [memberDiners, setMemberDiners] = useState<number>(1);
   const [lightIncluded, setLightIncluded] = useState(false);
   
-  const [space, setSpace] = useState<ComedorSpace | ''>('');
+  const [spaces, setSpaces] = useState<ComedorSpace[]>([]);
   const [selectedServices, setSelectedServices] = useState<KitchenService[]>([]);
 
   // Validar que los comensales socios no superen el total
@@ -59,7 +59,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!memberId) return alert('Selecciona un socio');
-    if (type === ResourceType.Comedor && !space) return alert('Selecciona un espacio');
+    if (type === ResourceType.Comedor && spaces.length === 0) return alert('Selecciona al menos un espacio');
     if (type === ResourceType.Comedor && memberDiners < 1) return alert('Debe haber al menos un socio.');
 
     const newRes: Reservation = {
@@ -70,7 +70,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => 
       type,
       diners: type === ResourceType.Comedor ? diners : undefined,
       memberDiners: type === ResourceType.Comedor ? memberDiners : undefined,
-      space: type === ResourceType.Comedor ? (space as ComedorSpace) : undefined,
+      spaces: type === ResourceType.Comedor ? spaces : undefined,
       kitchenServices: type === ResourceType.Comedor ? selectedServices : undefined,
       lightIncluded: type === ResourceType.Fronton ? lightIncluded : undefined,
       createdAt: Date.now()
@@ -116,6 +116,14 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => 
       prev.includes(service) 
         ? prev.filter(s => s !== service) 
         : [...prev, service]
+    );
+  };
+
+  const toggleSpace = (space: ComedorSpace) => {
+    setSpaces(prev =>
+      prev.includes(space)
+        ? prev.filter(s => s !== space)
+        : [...prev, space]
     );
   };
 
@@ -233,14 +241,15 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => 
                 <button
                   key={s}
                   type="button"
-                  onClick={() => setSpace(s)}
-                  className={`px-2 py-2 text-xs font-semibold rounded border transition-colors ${
-                    space === s 
-                      ? 'bg-primary text-white border-primary' 
+                  onClick={() => toggleSpace(s)}
+                  className={`px-2 py-2 text-xs font-semibold rounded border transition-colors flex items-center justify-center gap-1 ${
+                    spaces.includes(s) 
+                      ? 'bg-primary text-white border-primary shadow-sm' 
                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  {s}
+                  {spaces.includes(s) && <span>✓</span>}
+                  <span className="whitespace-nowrap">{s}</span>
                 </button>
               ))}
             </div>

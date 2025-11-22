@@ -46,7 +46,13 @@ export const StorageService = {
 
   // --- Reservations ---
   getReservations: async (): Promise<Reservation[]> => {
-    if (!supabase) return JSON.parse(localStorage.getItem('lagunartea_reservations') || '[]');
+    if (!supabase) {
+      const stored = JSON.parse(localStorage.getItem('lagunartea_reservations') || '[]');
+      return stored.map((r: any) => ({
+        ...r,
+        spaces: r.spaces || (r.space ? [r.space] : []),
+      }));
+    }
 
     const { data, error } = await supabase
       .from('reservations')
@@ -66,7 +72,7 @@ export const StorageService = {
       type: r.type,
       diners: r.diners,
       memberDiners: r.member_diners,
-      space: r.space,
+      spaces: r.spaces || (r.space ? [r.space] : []),
       kitchenServices: r.kitchen_services,
       lightIncluded: r.light_included,
       createdAt: r.created_at
@@ -89,7 +95,8 @@ export const StorageService = {
       type: res.type,
       diners: res.diners,
       member_diners: res.memberDiners,
-      space: res.space,
+      space: res.spaces?.[0] || null, // compat con columna previa
+      spaces: res.spaces,
       kitchen_services: res.kitchenServices,
       light_included: res.lightIncluded,
       created_at: res.createdAt

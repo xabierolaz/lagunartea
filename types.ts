@@ -33,7 +33,7 @@ export interface Reservation {
   // Comedor specific
   diners?: number;
   memberDiners?: number; // Cuántos de los diners son socios
-  space?: ComedorSpace;
+  spaces?: ComedorSpace[];
   kitchenServices?: KitchenService[];
   // Fronton specific
   lightIncluded?: boolean;
