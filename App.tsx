@@ -160,12 +160,17 @@ const App: React.FC = () => {
           <img src="/intro.gif" alt="Lagunartea intro" className="max-w-[320px] w-3/4 drop-shadow-lg" />
         </div>
       )}
+      {/* Background image */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{ backgroundImage: "url('/bg.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.12 }}
+      />
       {/* Background Logo */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-10 overflow-hidden">
         <Logo className="w-[120vw] h-[120vw] opacity-[0.03] text-primary transform -translate-y-10" />
       </div>
 
-      <div className="relative z-10 max-w-3xl mx-auto">
+      <div className="relative z-20 max-w-3xl mx-auto">
         {/* Header */}
         <header className="bg-white shadow-sm sticky top-0 z-20 px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-2">
