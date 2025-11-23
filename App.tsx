@@ -47,7 +47,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowIntro(false), 3000);
+    const timer = setTimeout(() => setShowIntro(false), 1800); // show intro briefly (gif duration)
     return () => clearTimeout(timer);
   }, []);
 
