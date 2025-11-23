@@ -11,6 +11,7 @@ interface Props {
 export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd }) => {
   const [memberId, setMemberId] = useState<number | ''>('');
   const [cart, setCart] = useState<Record<string, number>>({});
+  const generateId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
   
   const handleIncrement = (id: string) => {
     setCart(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
@@ -49,7 +50,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd }) => {
     const description = descriptionItems.join(', ');
 
     onAdd({
-      id: Math.random().toString(36).slice(2),
+      id: generateId(),
       memberId: Number(memberId),
       amount: totalAmount,
       description,

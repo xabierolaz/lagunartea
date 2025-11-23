@@ -12,6 +12,8 @@ interface Props {
 const MEAL_TYPES = ['Almuerzo', 'Comida', 'Cena'];
 
 export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => {
+  const generateId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+
   const [type, setType] = useState<ResourceType>(ResourceType.Comedor);
   const [memberId, setMemberId] = useState<number | ''>('');
   // Para Comedor usamos el nombre del turno, para Frontón la hora
@@ -63,7 +65,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => 
     if (type === ResourceType.Comedor && memberDiners < 1) return alert('Debe haber al menos un socio.');
 
     const newRes: Reservation = {
-      id: Math.random().toString(36).slice(2),
+      id: generateId(),
       memberId: Number(memberId),
       date,
       startTime: time,
@@ -90,7 +92,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => 
       }
 
       consumption = {
-        id: Math.random().toString(36).slice(2),
+        id: generateId(),
         memberId: Number(memberId),
         date: new Date().toISOString(),
         amount: cost,
