@@ -17,6 +17,7 @@ const App: React.FC = () => {
   const [consumptions, setConsumptions] = useState<Consumption[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [showIntro, setShowIntro] = useState(true);
   
   // UI State
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -43,6 +44,11 @@ const App: React.FC = () => {
     // Opcional: Polling simple para "tiempo real" rudimentario
     const interval = setInterval(refreshData, 30000); 
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowIntro(false), 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   // Handlers
@@ -149,6 +155,11 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen pb-20 relative">
+      {showIntro && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white animate-fade-in">
+          <img src="/intro.gif" alt="Lagunartea intro" className="max-w-[320px] w-3/4 drop-shadow-lg" />
+        </div>
+      )}
       {/* Background Logo */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
         <Logo className="w-[120vw] h-[120vw] opacity-[0.03] text-primary transform -translate-y-10" />
