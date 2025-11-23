@@ -64,6 +64,20 @@ begin
   end if;
 
   if not exists (
+    select 1 from pg_policies where schemaname = 'public' and tablename = 'members' and policyname = 'Members can be inserted by anyone'
+  ) then
+    create policy "Members can be inserted by anyone" on public.members
+      for insert with check (true);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies where schemaname = 'public' and tablename = 'members' and policyname = 'Members can be deleted by anyone'
+  ) then
+    create policy "Members can be deleted by anyone" on public.members
+      for delete using (true);
+  end if;
+
+  if not exists (
     select 1 from pg_policies where schemaname = 'public' and tablename = 'reservations' and policyname = 'Reservations are readable by anyone'
   ) then
     create policy "Reservations are readable by anyone" on public.reservations
