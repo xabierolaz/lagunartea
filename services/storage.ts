@@ -1,31 +1,20 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Consumption, Reservation, Member } from '../types';
-import { MEMBERS as STATIC_MEMBERS } from '../constants';
 
-// Configuración de Supabase
-// NOTA: En un proyecto real, estas variables deben estar en un archivo .env.local
-// NEXT_PUBLIC_SUPABASE_URL
-// NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Configuración estricta de Supabase: sin fallback local
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Cliente (si no hay claves, no se inicializa para evitar errores)
-let supabase: SupabaseClient | null = null;
-
-if (supabaseUrl && supabaseKey) {
-  try {
-    supabase = createClient(supabaseUrl, supabaseKey);
-  } catch (e) {
-    console.warn('Supabase client could not be initialized. Falling back to local storage.');
-  }
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Supabase env vars missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
 }
+
+const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
 
 export const StorageService = {
   // --- Members ---
   getMembers: async (): Promise<Member[]> => {
-    if (!supabase) return STATIC_MEMBERS;
-    
     const { data, error } = await supabase
       .from('members')
       .select('*')
@@ -33,7 +22,7 @@ export const StorageService = {
       
     if (error) {
       console.error('Error fetching members:', error);
-      return STATIC_MEMBERS;
+      return [];
     }
     
     return data.map((m: any) => ({
@@ -46,14 +35,6 @@ export const StorageService = {
 
   // --- Reservations ---
   getReservations: async (): Promise<Reservation[]> => {
-    if (!supabase) {
-      const stored = JSON.parse(localStorage.getItem('lagunartea_reservations') || '[]');
-      return stored.map((r: any) => ({
-        ...r,
-        spaces: r.spaces || (r.space ? [r.space] : []),
-      }));
-    }
-
     const { data, error } = await supabase
       .from('reservations')
       .select('*');
@@ -80,13 +61,6 @@ export const StorageService = {
   },
 
   addReservation: async (res: Reservation): Promise<void> => {
-    if (!supabase) {
-      const current = JSON.parse(localStorage.getItem('lagunartea_reservations') || '[]');
-      current.push(res);
-      localStorage.setItem('lagunartea_reservations', JSON.stringify(current));
-      return;
-    }
-
     const dbPayload = {
       id: res.id,
       member_id: res.memberId,
@@ -107,21 +81,12 @@ export const StorageService = {
   },
 
   removeReservation: async (id: string): Promise<void> => {
-    if (!supabase) {
-      const current = JSON.parse(localStorage.getItem('lagunartea_reservations') || '[]');
-      const filtered = current.filter((r: Reservation) => r.id !== id);
-      localStorage.setItem('lagunartea_reservations', JSON.stringify(filtered));
-      return;
-    }
-
     const { error } = await supabase.from('reservations').delete().eq('id', id);
     if (error) console.error('Error removing reservation:', error);
   },
 
   // --- Consumptions ---
   getConsumptions: async (): Promise<Consumption[]> => {
-    if (!supabase) return JSON.parse(localStorage.getItem('lagunartea_consumptions') || '[]');
-
     const { data, error } = await supabase
       .from('consumptions')
       .select('*');
@@ -142,13 +107,6 @@ export const StorageService = {
   },
 
   addConsumption: async (con: Consumption): Promise<void> => {
-    if (!supabase) {
-      const current = JSON.parse(localStorage.getItem('lagunartea_consumptions') || '[]');
-      current.push(con);
-      localStorage.setItem('lagunartea_consumptions', JSON.stringify(current));
-      return;
-    }
-
     const dbPayload = {
       id: con.id,
       member_id: con.memberId,
@@ -163,13 +121,6 @@ export const StorageService = {
   },
 
   removeConsumption: async (id: string): Promise<void> => {
-    if (!supabase) {
-      const current = JSON.parse(localStorage.getItem('lagunartea_consumptions') || '[]');
-      const filtered = current.filter((c: Consumption) => c.id !== id);
-      localStorage.setItem('lagunartea_consumptions', JSON.stringify(filtered));
-      return;
-    }
-
     const { error } = await supabase.from('consumptions').delete().eq('id', id);
     if (error) console.error('Error removing consumption:', error);
   }
