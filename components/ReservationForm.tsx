@@ -1,17 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
-import { ComedorSpace, KitchenService, Reservation, ResourceType, Consumption } from '../types';
-import { MEMBERS, BEVERAGES } from '../constants';
+import { ComedorSpace, KitchenService, Reservation, ResourceType, Consumption, Item, Member } from '../types';
 
 interface Props {
   date: string; // YYYY-MM-DD
   onSave: (res: Reservation, consumption?: Consumption) => void;
   onCancel: () => void;
+  members: Member[];
+  items: Item[];
 }
 
 const MEAL_TYPES = ['Almuerzo', 'Comida', 'Cena'];
 
-export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => {
+export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, members, items }) => {
   const generateId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
 
   const [type, setType] = useState<ResourceType>(ResourceType.Comedor);
@@ -39,11 +40,8 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => 
 
     // Coste Comedor
     if (type === ResourceType.Comedor) {
-      const itemSocio = BEVERAGES.find(b => b.id === 'comensal_socio');
-      const itemNoSocio = BEVERAGES.find(b => b.id === 'comensal_no_socio');
-      
-      const priceSocio = itemSocio?.price || 0;
-      const priceNoSocio = itemNoSocio?.price || 0;
+      const priceSocio = items.find(b => b.id === 'comensal_socio')?.price || 0;
+      const priceNoSocio = items.find(b => b.id === 'comensal_no_socio')?.price || 0;
       
       const nonMembers = Math.max(0, diners - memberDiners);
       total += (memberDiners * priceSocio) + (nonMembers * priceNoSocio);
@@ -51,7 +49,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => 
 
     // Coste Luz Frontón
     if (type === ResourceType.Fronton && lightIncluded) {
-      const itemLuz = BEVERAGES.find(b => b.id === 'luz_fronton');
+      const itemLuz = items.find(b => b.id === 'luz_fronton');
       total += itemLuz?.price || 0;
     }
     
@@ -169,7 +167,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel }) => 
           required
         >
           <option value="" disabled>Seleccionar socio...</option>
-          {MEMBERS.sort((a,b) => a.lastName.localeCompare(b.lastName)).map(m => (
+          {members.sort((a,b) => a.lastName.localeCompare(b.lastName)).map(m => (
             <option key={m.id} value={m.id}>
               {m.lastName}, {m.firstName}
             </option>

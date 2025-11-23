@@ -6,16 +6,17 @@ import { ConsumptionView } from './components/ConsumptionView';
 import { ReservationForm } from './components/ReservationForm';
 import { Modal } from './components/Modal';
 import { Logo } from './components/Logo';
+import { AdminPanel } from './components/AdminPanel';
 import { StorageService } from './services/storage';
-import { Consumption, Reservation, ResourceType, ViewState, Member } from './types';
-import { MEMBERS as STATIC_MEMBERS } from './constants';
+import { Consumption, Reservation, ResourceType, ViewState, Member, Item } from './types';
 
 const App: React.FC = () => {
   // State
   const [view, setView] = useState<ViewState>('CALENDAR');
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [consumptions, setConsumptions] = useState<Consumption[]>([]);
-  const [members, setMembers] = useState<Member[]>(STATIC_MEMBERS);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   
   // UI State
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -24,14 +25,16 @@ const App: React.FC = () => {
 
   // Data Fetching
   const refreshData = async () => {
-    const [res, cons, mems] = await Promise.all([
+    const [res, cons, mems, itm] = await Promise.all([
       StorageService.getReservations(),
       StorageService.getConsumptions(),
-      StorageService.getMembers()
+      StorageService.getMembers(),
+      StorageService.getItems()
     ]);
     setReservations(res);
     setConsumptions(cons);
     if (mems && mems.length > 0) setMembers(mems);
+    setItems(itm);
   };
 
   useEffect(() => {
@@ -73,6 +76,40 @@ const App: React.FC = () => {
   const handleAddConsumption = async (c: Consumption) => {
     await StorageService.addConsumption(c);
     refreshData();
+  };
+
+  const handleMemberSave = async (member: Member) => {
+    await StorageService.updateMember(member);
+    refreshData();
+  };
+
+  const handleMemberAdd = async (member: Member) => {
+    await StorageService.addMember(member);
+    refreshData();
+  };
+
+  const handleMemberDelete = async (memberId: number) => {
+    if (confirm('¿Eliminar socio?')) {
+      await StorageService.deleteMember(memberId);
+      refreshData();
+    }
+  };
+
+  const handleItemSave = async (item: Item) => {
+    await StorageService.updateItem(item);
+    refreshData();
+  };
+
+  const handleItemAdd = async (item: Item) => {
+    await StorageService.addItem(item);
+    refreshData();
+  };
+
+  const handleItemDelete = async (itemId: string) => {
+    if (confirm('¿Eliminar item?')) {
+      await StorageService.deleteItem(itemId);
+      refreshData();
+    }
   };
 
   const toggleAdmin = () => {
@@ -145,7 +182,22 @@ const App: React.FC = () => {
 
           {view === 'CONSUMPTION' && (
             <div className="animate-fade-in">
-              <ConsumptionView consumptions={consumptions} onAdd={handleAddConsumption} />
+              <ConsumptionView consumptions={consumptions} onAdd={handleAddConsumption} items={items} members={members} />
+            </div>
+          )}
+
+          {view === 'ADMIN' && isAdmin && (
+            <div className="space-y-8 animate-fade-in">
+              <AdminPanel
+                members={members}
+                items={items}
+                onMemberSave={handleMemberSave}
+                onMemberAdd={handleMemberAdd}
+                onMemberDelete={handleMemberDelete}
+                onItemSave={handleItemSave}
+                onItemAdd={handleItemAdd}
+                onItemDelete={handleItemDelete}
+              />
             </div>
           )}
         </main>
@@ -170,6 +222,17 @@ const App: React.FC = () => {
             </svg>
             <span className="text-[10px] font-bold uppercase">Gastos</span>
           </button>
+          {isAdmin && (
+            <button 
+              onClick={() => setView('ADMIN')}
+              className={`flex flex-col items-center gap-1 transition-colors ${view === 'ADMIN' ? 'text-primary' : 'text-gray-400'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="text-[10px] font-bold uppercase">Admin</span>
+            </button>
+          )}
         </nav>
       </div>
 
@@ -251,6 +314,8 @@ const App: React.FC = () => {
             date={selectedDate} 
             onSave={handleSaveReservation}
             onCancel={() => setIsBookingModalOpen(false)}
+            members={members}
+            items={items}
           />
         )}
       </Modal>

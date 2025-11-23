@@ -1,6 +1,6 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Consumption, Reservation, Member } from '../types';
+import { Consumption, Reservation, Member, Item } from '../types';
 
 // Configuración estricta de Supabase: sin fallback local
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -31,6 +31,34 @@ export const StorageService = {
       lastName: m.last_name || m.lastName,
       phone: m.phone
     }));
+  },
+
+  addMember: async (member: Member): Promise<void> => {
+    const payload = {
+      id: member.id,
+      first_name: member.firstName,
+      last_name: member.lastName,
+      phone: member.phone
+    };
+
+    const { error } = await supabase.from('members').insert(payload);
+    if (error) console.error('Error adding member:', error);
+  },
+
+  updateMember: async (member: Member): Promise<void> => {
+    const payload = {
+      first_name: member.firstName,
+      last_name: member.lastName,
+      phone: member.phone
+    };
+
+    const { error } = await supabase.from('members').update(payload).eq('id', member.id);
+    if (error) console.error('Error updating member:', error);
+  },
+
+  deleteMember: async (memberId: number): Promise<void> => {
+    const { error } = await supabase.from('members').delete().eq('id', memberId);
+    if (error) console.error('Error deleting member:', error);
   },
 
   // --- Reservations ---
@@ -123,5 +151,58 @@ export const StorageService = {
   removeConsumption: async (id: string): Promise<void> => {
     const { error } = await supabase.from('consumptions').delete().eq('id', id);
     if (error) console.error('Error removing consumption:', error);
+  },
+
+  // --- Items ---
+  getItems: async (): Promise<Item[]> => {
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching items:', error);
+      return [];
+    }
+
+    return data.map((it: any) => ({
+      id: it.id,
+      name: it.name,
+      icon: it.icon,
+      price: Number(it.price),
+      category: it.category,
+      sortOrder: it.sort_order,
+      createdAt: it.created_at
+    }));
+  },
+
+  addItem: async (item: Item): Promise<void> => {
+    const payload = {
+      id: item.id,
+      name: item.name,
+      icon: item.icon,
+      price: item.price,
+      category: item.category,
+      sort_order: item.sortOrder ?? 0
+    };
+    const { error } = await supabase.from('items').insert(payload);
+    if (error) console.error('Error adding item:', error);
+  },
+
+  updateItem: async (item: Item): Promise<void> => {
+    const payload = {
+      name: item.name,
+      icon: item.icon,
+      price: item.price,
+      category: item.category,
+      sort_order: item.sortOrder ?? 0
+    };
+    const { error } = await supabase.from('items').update(payload).eq('id', item.id);
+    if (error) console.error('Error updating item:', error);
+  },
+
+  deleteItem: async (itemId: string): Promise<void> => {
+    const { error } = await supabase.from('items').delete().eq('id', itemId);
+    if (error) console.error('Error deleting item:', error);
   }
 };

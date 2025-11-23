@@ -51,3 +51,13 @@ export interface Consumption {
 }
 
 export type ViewState = 'CALENDAR' | 'CONSUMPTION' | 'ADMIN';
+
+export interface Item {
+  id: string;
+  name: string;
+  icon?: string | null;
+  price: number;
+  category: string; // e.g. bebida, servicio, cuota
+  sortOrder?: number | null;
+  createdAt?: string | number;
+}

@@ -1,14 +1,15 @@
 
 import React, { useState } from 'react';
-import { Consumption } from '../types';
-import { MEMBERS, BEVERAGES } from '../constants';
+import { Consumption, Item, Member } from '../types';
 
 interface Props {
   consumptions: Consumption[];
   onAdd: (c: Consumption) => void;
+  items: Item[];
+  members?: Member[];
 }
 
-export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd }) => {
+export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, members = [] }) => {
   const [memberId, setMemberId] = useState<number | ''>('');
   const [cart, setCart] = useState<Record<string, number>>({});
   const generateId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
@@ -33,7 +34,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd }) => {
   };
 
   const totalAmount = Object.entries(cart).reduce((sum, [id, count]) => {
-    const item = BEVERAGES.find(b => b.id === id);
+    const item = items.find(b => b.id === id);
     return sum + (item?.price || 0) * (count as number);
   }, 0);
 
@@ -43,7 +44,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd }) => {
 
     // Generate Description
     const descriptionItems = Object.entries(cart).map(([id, count]) => {
-      const item = BEVERAGES.find(b => b.id === id);
+      const item = items.find(b => b.id === id);
       return `${count}x ${item?.name}`;
     });
     
@@ -70,13 +71,11 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd }) => {
 
   // Separate grid items: Fees (Cuotas) vs Drinks
   // Removed comensal fees and luz_fronton from here as they are in reservation now
-  const feeIds = ['lena', 'descorche']; 
-  const feeItems = BEVERAGES.filter(b => feeIds.includes(b.id));
-  
-  // Exclude comensal fees from drinks too just in case
-  // Also exclude luz_fronton explicitly so it doesn't show up if it wasn't in feeIds
+  // Servicios/cuotas (no luz/comensal en esta vista)
+  const feeItems = items.filter(b => b.category === 'servicio' && !['luz_fronton'].includes(b.id));
+  // Bebidas excluyendo cuotas/servicios/luz y comensales
   const excludeIds = ['comensal_socio', 'comensal_no_socio', 'luz_fronton'];
-  const drinkItems = BEVERAGES.filter(b => !feeIds.includes(b.id) && !excludeIds.includes(b.id));
+  const drinkItems = items.filter(b => b.category === 'bebida' && !excludeIds.includes(b.id));
 
   return (
     <div className="space-y-6 pb-24">
@@ -89,7 +88,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd }) => {
           onChange={e => setMemberId(Number(e.target.value))}
         >
           <option value="" disabled>Seleccionar socio...</option>
-          {MEMBERS.sort((a,b) => a.lastName.localeCompare(b.lastName)).map(m => (
+          {members.sort((a,b) => a.lastName.localeCompare(b.lastName)).map(m => (
             <option key={m.id} value={m.id}>{m.lastName}, {m.firstName}</option>
           ))}
         </select>
@@ -121,7 +120,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd }) => {
                 <div className="text-3xl font-black text-gray-900">{totalAmount.toFixed(2)}€</div>
               </div>
               <div className="text-right text-sm text-gray-500 max-w-[60%] truncate">
-                {Object.entries(cart).map(([id, c]) => `${c} ${BEVERAGES.find(b=>b.id===id)?.name}`).join(', ')}
+                {Object.entries(cart).map(([id, c]) => `${c} ${items.find(b=>b.id===id)?.name}`).join(', ')}
               </div>
             </div>
             <button 
@@ -142,7 +141,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd }) => {
             <p className="text-gray-400 text-sm py-2 text-center italic">No hay registros recientes.</p>
           ) : (
             recent.map(c => {
-              const m = MEMBERS.find(x => x.id === c.memberId);
+              const m = members.find(x => x.id === c.memberId);
               return (
                 <div key={c.id} className="py-3 flex justify-between items-start">
                   <div>
@@ -163,7 +162,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd }) => {
 
 // Helper Component for Grid Cards
 const renderCard = (
-  item: { id: string; name: string; icon: string; price: number },
+  item: { id: string; name: string; icon?: string | null; price: number },
   cart: Record<string, number>,
   onInc: (id: string) => void,
   onDec: (id: string, e: React.MouseEvent) => void

@@ -57,6 +57,13 @@ begin
   end if;
 
   if not exists (
+    select 1 from pg_policies where schemaname = 'public' and tablename = 'members' and policyname = 'Members can be updated by anyone'
+  ) then
+    create policy "Members can be updated by anyone" on public.members
+      for update using (true);
+  end if;
+
+  if not exists (
     select 1 from pg_policies where schemaname = 'public' and tablename = 'reservations' and policyname = 'Reservations are readable by anyone'
   ) then
     create policy "Reservations are readable by anyone" on public.reservations
@@ -98,6 +105,71 @@ begin
       for delete using (true);
   end if;
 end $$;
+
+-- Catalog of editable items (prices, beverages, services, fees)
+create table if not exists public.items (
+  id text primary key,
+  name text not null,
+  icon text,
+  price numeric not null,
+  category text not null, -- e.g. bebida, servicio, cuota
+  sort_order integer default 0,
+  created_at timestamptz default now()
+);
+
+alter table public.items enable row level security;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies where schemaname = 'public' and tablename = 'items' and policyname = 'Items are readable by anyone'
+  ) then
+    create policy "Items are readable by anyone" on public.items
+      for select using (true);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies where schemaname = 'public' and tablename = 'items' and policyname = 'Items can be inserted by anyone'
+  ) then
+    create policy "Items can be inserted by anyone" on public.items
+      for insert with check (true);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies where schemaname = 'public' and tablename = 'items' and policyname = 'Items can be updated by anyone'
+  ) then
+    create policy "Items can be updated by anyone" on public.items
+      for update using (true);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies where schemaname = 'public' and tablename = 'items' and policyname = 'Items can be deleted by anyone'
+  ) then
+    create policy "Items can be deleted by anyone" on public.items
+      for delete using (true);
+  end if;
+end $$;
+
+-- Seed default items (upsert)
+insert into public.items (id, name, icon, price, category, sort_order) values
+  ('luz_fronton', 'Luz Frontón', '💡', 6.00, 'servicio', 10),
+  ('lena', 'Leña', '🪵', 4.00, 'servicio', 20),
+  ('descorche', 'Descorche', '🍾', 2.00, 'servicio', 30),
+  ('comensal_socio', 'Comensal Socio', '👤', 1.75, 'cuota', 40),
+  ('comensal_no_socio', 'Comensal No Socio', '👥', 3.00, 'cuota', 50),
+  ('cerveza', 'Cerveza', '🍺', 1.80, 'bebida', 100),
+  ('refresco', 'Refresco/Gaseosa', '🥤', 1.80, 'bebida', 110),
+  ('vino_blanco', 'Vino Blanco (Bornos)', '🥂', 7.50, 'bebida', 120),
+  ('vino_rosado', 'Vino Rosado (Sarria)', '🍷', 6.00, 'bebida', 130),
+  ('vino_tinto', 'Vino Tinto (Sarria)', '🍷', 6.00, 'bebida', 140),
+  ('vino_lopez_haro', 'Vino López de Haro', '🍷', 8.00, 'bebida', 150),
+  ('sidra', 'Sidra', '🍾', 5.00, 'bebida', 160)
+on conflict (id) do update
+set name = excluded.name,
+    icon = excluded.icon,
+    price = excluded.price,
+    category = excluded.category,
+    sort_order = excluded.sort_order;
 
 -- Seed members (upsert)
 insert into public.members (id, last_name, first_name, phone) values
