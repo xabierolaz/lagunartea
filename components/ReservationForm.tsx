@@ -22,7 +22,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
   
   // Diners logic
   const [diners, setDiners] = useState<number>(4);
-  const [memberDiners, setMemberDiners] = useState<number>(1);
+  const [memberDiners, setMemberDiners] = useState<number | ''>(1);
   const [lightIncluded, setLightIncluded] = useState(false);
   
   const [spaces, setSpaces] = useState<ComedorSpace[]>([]);
@@ -30,7 +30,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
 
   // Validar que los comensales socios no superen el total
   useEffect(() => {
-    if (memberDiners > diners) {
+    if (memberDiners !== '' && memberDiners > diners) {
       setMemberDiners(diners);
     }
   }, [diners, memberDiners]);
@@ -43,8 +43,9 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
       const priceSocio = items.find(b => b.id === 'comensal_socio')?.price || 0;
       const priceNoSocio = items.find(b => b.id === 'comensal_no_socio')?.price || 0;
       
-      const nonMembers = Math.max(0, diners - memberDiners);
-      total += (memberDiners * priceSocio) + (nonMembers * priceNoSocio);
+      const memberCount = typeof memberDiners === 'number' ? memberDiners : 0;
+      const nonMembers = Math.max(0, diners - memberCount);
+      total += (memberCount * priceSocio) + (nonMembers * priceNoSocio);
     }
 
     // Coste Luz Frontón
@@ -58,9 +59,10 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const memberCount = typeof memberDiners === 'number' ? memberDiners : 0;
     if (!memberId) return alert('Selecciona un socio');
     if (type === ResourceType.Comedor && spaces.length === 0) return alert('Selecciona al menos un espacio');
-    if (type === ResourceType.Comedor && memberDiners < 1) return alert('Debe haber al menos un socio.');
+    if (type === ResourceType.Comedor && memberCount < 1) return alert('Debe haber al menos un socio.');
 
     const newRes: Reservation = {
       id: generateId(),
@@ -69,7 +71,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
       startTime: time,
       type,
       diners: type === ResourceType.Comedor ? diners : undefined,
-      memberDiners: type === ResourceType.Comedor ? memberDiners : undefined,
+      memberDiners: type === ResourceType.Comedor ? memberCount : undefined,
       spaces: type === ResourceType.Comedor ? spaces : undefined,
       kitchenServices: type === ResourceType.Comedor ? selectedServices : undefined,
       lightIncluded: type === ResourceType.Fronton ? lightIncluded : undefined,
@@ -83,8 +85,8 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
     if (cost > 0) {
       let desc = '';
       if (type === ResourceType.Comedor) {
-        const nonMembers = Math.max(0, diners - memberDiners);
-        desc = `Reserva Comedor: ${memberDiners} Socio(s), ${nonMembers} No Socio(s)`;
+        const nonMembers = Math.max(0, diners - memberCount);
+        desc = `Reserva Comedor: ${memberCount} Socio(s), ${nonMembers} No Socio(s)`;
       } else if (type === ResourceType.Fronton && lightIncluded) {
         desc = `Reserva Frontón: Luz`;
       }
@@ -285,7 +287,15 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
                   min="1"
                   max={diners}
                   value={memberDiners}
-                  onChange={e => setMemberDiners(Math.max(1, Math.min(diners, Number(e.target.value))))}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setMemberDiners('');
+                      return;
+                    }
+                    const num = Number(val);
+                    setMemberDiners(Math.max(1, Math.min(diners, num)));
+                  }}
                   className="w-full border border-gray-300 rounded px-2 py-1 text-center font-bold text-sm"
                 />
               </div>

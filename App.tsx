@@ -84,6 +84,13 @@ const App: React.FC = () => {
     refreshData();
   };
 
+  const handleDeleteConsumption = async (id: string) => {
+    if (confirm('¿Eliminar este movimiento?')) {
+      await StorageService.removeConsumption(id);
+      refreshData();
+    }
+  };
+
   const handleMemberSave = async (member: Member) => {
     await StorageService.updateMember(member);
     refreshData();
@@ -198,7 +205,14 @@ const App: React.FC = () => {
 
           {view === 'CONSUMPTION' && (
             <div className="animate-fade-in">
-              <ConsumptionView consumptions={consumptions} onAdd={handleAddConsumption} items={items} members={members} />
+              <ConsumptionView
+                consumptions={consumptions}
+                onAdd={handleAddConsumption}
+                onDelete={handleDeleteConsumption}
+                items={items}
+                members={members}
+                isAdmin={isAdmin}
+              />
             </div>
           )}
 

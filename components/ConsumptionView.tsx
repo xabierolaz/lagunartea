@@ -7,9 +7,11 @@ interface Props {
   onAdd: (c: Consumption) => void;
   items: Item[];
   members?: Member[];
+  onDelete?: (id: string) => void;
+  isAdmin?: boolean;
 }
 
-export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, members = [] }) => {
+export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, members = [], onDelete, isAdmin = false }) => {
   const [memberId, setMemberId] = useState<number | ''>('');
   const [cart, setCart] = useState<Record<string, number>>({});
   const generateId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
@@ -143,13 +145,23 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
             recent.map(c => {
               const m = members.find(x => x.id === c.memberId);
               return (
-                <div key={c.id} className="py-3 flex justify-between items-start">
-                  <div>
+                <div key={c.id} className="py-3 flex justify-between items-start gap-3">
+                  <div className="flex-1">
                     <p className="font-bold text-sm text-gray-800">{m?.lastName}, {m?.firstName}</p>
                     <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{c.description}</p>
                     <p className="text-[10px] text-gray-400 mt-0.5">{new Date(c.createdAt).toLocaleDateString()} {new Date(c.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                   </div>
-                  <span className="font-bold text-accent bg-accent/5 px-2 py-1 rounded text-sm whitespace-nowrap">-{c.amount.toFixed(2)}€</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-accent bg-accent/5 px-2 py-1 rounded text-sm whitespace-nowrap">-{c.amount.toFixed(2)}€</span>
+                    {isAdmin && onDelete && (
+                      <button
+                        onClick={() => onDelete(c.id)}
+                        className="text-red-600 text-xs border border-red-200 rounded px-2 py-1 bg-white hover:bg-red-50"
+                      >
+                        Borrar
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })
