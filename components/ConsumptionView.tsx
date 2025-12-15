@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Consumption, Item, Member } from '../types';
 
 interface Props {
@@ -63,19 +63,29 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
 
     // Reset
     setCart({});
-    setMemberId('');
+    // We keep the member selected so they can see their new entry immediately
     window.scrollTo({ top: 0, behavior: 'smooth' });
     alert('Gasto guardado correctamente');
   };
 
-  // Recent transactions
-  const recent = [...consumptions].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
+  // History & Filter Logic
+  const { displayedHistory, memberTotal } = useMemo(() => {
+    // Sort by newest first
+    const sorted = [...consumptions].sort((a, b) => b.createdAt - a.createdAt);
+    
+    if (memberId) {
+      // Filter for specific member
+      const filtered = sorted.filter(c => c.memberId === Number(memberId));
+      const total = filtered.reduce((sum, c) => sum + c.amount, 0);
+      return { displayedHistory: filtered, memberTotal: total };
+    } else {
+      // Global recent
+      return { displayedHistory: sorted.slice(0, 20), memberTotal: 0 };
+    }
+  }, [consumptions, memberId]);
 
   // Separate grid items: Fees (Cuotas) vs Drinks
-  // Removed comensal fees and luz_fronton from here as they are in reservation now
-  // Servicios/cuotas (no luz/comensal en esta vista)
   const feeItems = items.filter(b => b.category === 'servicio' && !['luz_fronton'].includes(b.id));
-  // Bebidas excluyendo cuotas/servicios/luz y comensales
   const excludeIds = ['comensal_socio', 'comensal_no_socio', 'luz_fronton'];
   const drinkItems = items.filter(b => b.category === 'bebida' && !excludeIds.includes(b.id));
 
@@ -135,32 +145,60 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
         </div>
       )}
 
-      {/* Recent List */}
-      <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mt-8">
-        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Últimos movimientos</h3>
-        <div className="divide-y divide-gray-100">
-          {recent.length === 0 ? (
-            <p className="text-gray-400 text-sm py-2 text-center italic">No hay registros recientes.</p>
+      {/* History List */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-8 overflow-hidden">
+        <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+          <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
+            {memberId ? 'Historial de Socio' : 'Últimos Movimientos'}
+          </h3>
+          {memberId !== '' && (
+            <div className="text-right">
+              <span className="text-[10px] text-gray-500 uppercase block">Total Acumulado</span>
+              <span className="font-black text-lg text-primary">{memberTotal.toFixed(2)}€</span>
+            </div>
+          )}
+        </div>
+        
+        <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+          {displayedHistory.length === 0 ? (
+            <p className="text-gray-400 text-sm py-8 text-center italic">No hay registros.</p>
           ) : (
-            recent.map(c => {
+            displayedHistory.map(c => {
               const m = members.find(x => x.id === c.memberId);
+              const dateObj = new Date(c.createdAt);
+              
               return (
-                <div key={c.id} className="py-3 flex justify-between items-start gap-3">
-                  <div className="flex-1">
-                    <p className="font-bold text-sm text-gray-800">{m?.lastName}, {m?.firstName}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{c.description}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{new Date(c.createdAt).toLocaleDateString()} {new Date(c.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                <div key={c.id} className="p-4 flex flex-col gap-2 hover:bg-gray-50 transition-colors">
+                  <div className="flex justify-between items-start w-full">
+                    <div>
+                      {/* Show name only if looking at global list */}
+                      {!memberId && (
+                        <p className="font-bold text-sm text-gray-900 mb-0.5">
+                          {m?.lastName}, {m?.firstName}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 font-medium">
+                        {dateObj.toLocaleDateString()} · {dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="font-bold text-gray-900 text-base">
+                        {c.amount.toFixed(2)}€
+                      </span>
+                      {isAdmin && onDelete && (
+                        <button
+                          onClick={() => onDelete(c.id)}
+                          className="text-[10px] text-red-500 hover:text-red-700 underline"
+                        >
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-accent bg-accent/5 px-2 py-1 rounded text-sm whitespace-nowrap">-{c.amount.toFixed(2)}€</span>
-                    {isAdmin && onDelete && (
-                      <button
-                        onClick={() => onDelete(c.id)}
-                        className="text-red-600 text-xs border border-red-200 rounded px-2 py-1 bg-white hover:bg-red-50"
-                      >
-                        Borrar
-                      </button>
-                    )}
+                  
+                  {/* Detailed Description Area */}
+                  <div className="bg-gray-50 rounded px-3 py-2 text-sm text-gray-700 border border-gray-100">
+                    {c.description || <span className="italic text-gray-400">Sin detalles</span>}
                   </div>
                 </div>
               );
