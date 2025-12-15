@@ -80,7 +80,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
       return { displayedHistory: filtered, memberTotal: total };
     } else {
       // Global recent
-      return { displayedHistory: sorted.slice(0, 20), memberTotal: 0 };
+      return { displayedHistory: sorted, memberTotal: 0 };
     }
   }, [consumptions, memberId]);
 
