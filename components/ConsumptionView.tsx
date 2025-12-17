@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Consumption, Item, Member } from '../types';
 
@@ -68,20 +67,58 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
     alert('Gasto guardado correctamente');
   };
 
-  // History & Filter Logic
-  const { displayedHistory, memberTotal } = useMemo(() => {
+  // History & Filter Logic (Grouped)
+  const { groupedHistory, memberTotal } = useMemo(() => {
     // Sort by newest first
     const sorted = [...consumptions].sort((a, b) => b.createdAt - a.createdAt);
     
+    let filtered = sorted;
+    let total = 0;
+
     if (memberId) {
-      // Filter for specific member
-      const filtered = sorted.filter(c => c.memberId === Number(memberId));
-      const total = filtered.reduce((sum, c) => sum + c.amount, 0);
-      return { displayedHistory: filtered, memberTotal: total };
+      filtered = sorted.filter(c => c.memberId === Number(memberId));
+      total = filtered.reduce((sum, c) => sum + c.amount, 0);
     } else {
-      // Global recent
-      return { displayedHistory: sorted, memberTotal: 0 };
+      total = sorted.reduce((sum, c) => sum + c.amount, 0); 
     }
+
+    // Grouping Logic: Key = "YYYY-MM-DD_MemberID"
+    const groups: Record<string, {
+      dateKey: string;
+      dateObj: Date;
+      memberId: number;
+      totalAmount: number;
+      items: Consumption[];
+    }> = {};
+
+    filtered.forEach(c => {
+      const dateObj = new Date(c.createdAt);
+      const dateKey = dateObj.toLocaleDateString();
+      const groupKey = `${dateKey}_${c.memberId}`;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          dateKey,
+          dateObj,
+          memberId: c.memberId,
+          totalAmount: 0,
+          items: []
+        };
+      }
+      
+      groups[groupKey].items.push(c);
+      groups[groupKey].totalAmount += c.amount;
+    });
+
+    // Convert back to array and sort by date (newest group first)
+    // We use the timestamp of the *most recent item* in the group for sorting
+    const groupedArray = Object.values(groups).sort((a, b) => {
+        const timeA = Math.max(...a.items.map(i => i.createdAt));
+        const timeB = Math.max(...b.items.map(i => i.createdAt));
+        return timeB - timeA;
+    });
+
+    return { groupedHistory: groupedArray, memberTotal: total };
   }, [consumptions, memberId]);
 
   // Separate grid items: Fees (Cuotas) vs Drinks
@@ -160,45 +197,61 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
         </div>
         
         <div className="divide-y divide-gray-100">
-          {displayedHistory.length === 0 ? (
+          {groupedHistory.length === 0 ? (
             <p className="text-gray-400 text-sm py-8 text-center italic">No hay registros.</p>
           ) : (
-            displayedHistory.map(c => {
-              const m = members.find(x => x.id === c.memberId);
-              const dateObj = new Date(c.createdAt);
+            groupedHistory.map(group => {
+              const m = members.find(x => x.id === group.memberId);
               
               return (
-                <div key={c.id} className="p-4 flex flex-col gap-2 hover:bg-gray-50 transition-colors">
-                  <div className="flex justify-between items-start w-full">
+                <div key={`${group.dateKey}-${group.memberId}`} className="p-4 hover:bg-gray-50 transition-colors border-l-4 border-transparent hover:border-primary/20">
+                  {/* Header: Date + Member + Total */}
+                  <div className="flex justify-between items-center mb-3">
                     <div>
-                      {/* Show name only if looking at global list */}
                       {!memberId && (
-                        <p className="font-bold text-sm text-gray-900 mb-0.5">
+                        <p className="font-bold text-sm text-gray-900 leading-tight">
                           {m?.lastName}, {m?.firstName}
                         </p>
                       )}
-                      <p className="text-xs text-gray-500 font-medium">
-                        {dateObj.toLocaleDateString()} · {dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      <p className="text-xs text-gray-500 font-medium capitalize">
+                        {group.dateObj.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="font-bold text-gray-900 text-base">
-                        {c.amount.toFixed(2)}€
-                      </span>
-                      {isAdmin && onDelete && (
-                        <button
-                          onClick={() => onDelete(c.id)}
-                          className="text-[10px] text-red-500 hover:text-red-700 underline"
-                        >
-                          Eliminar
-                        </button>
-                      )}
+                    <div className="text-right bg-gray-50 px-2 py-1 rounded">
+                       <span className="block text-[10px] text-gray-400 uppercase tracking-wider">Total Día</span>
+                       <span className="font-black text-lg text-gray-900">{group.totalAmount.toFixed(2)}€</span>
                     </div>
                   </div>
-                  
-                  {/* Detailed Description Area */}
-                  <div className="bg-gray-50 rounded px-3 py-2 text-sm text-gray-700 border border-gray-100">
-                    {c.description || <span className="italic text-gray-400">Sin detalles</span>}
+
+                  {/* List of Items */}
+                  <div className="space-y-2 pl-2">
+                    {group.items.map(c => (
+                      <div key={c.id} className="flex justify-between items-start text-sm border-l-2 border-gray-200 pl-3 py-0.5">
+                        <div className="text-gray-600 flex-1 pr-4">
+                          {c.description ? (
+                             <span className="text-gray-800">{c.description}</span>
+                          ) : (
+                             <span className="italic text-gray-400">Sin detalles</span>
+                          )}
+                          <div className="text-[10px] text-gray-400 mt-0.5">
+                            {new Date(c.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end">
+                           <span className="font-semibold text-gray-700 whitespace-nowrap text-xs">
+                             {c.amount.toFixed(2)}€
+                           </span>
+                           {isAdmin && onDelete && (
+                            <button
+                              onClick={() => onDelete(c.id)}
+                              className="text-[10px] text-red-400 hover:text-red-600 underline mt-1"
+                            >
+                              Eliminar
+                            </button>
+                           )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
