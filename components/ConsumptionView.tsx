@@ -149,7 +149,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-8 overflow-hidden">
         <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
           <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-            {memberId ? 'Historial de Socio' : 'Últimos Movimientos'}
+            {memberId ? 'Historial de Socio' : 'Historial Completo de Consumos'}
           </h3>
           {memberId !== '' && (
             <div className="text-right">
@@ -159,7 +159,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
           )}
         </div>
         
-        <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+        <div className="divide-y divide-gray-100">
           {displayedHistory.length === 0 ? (
             <p className="text-gray-400 text-sm py-8 text-center italic">No hay registros.</p>
           ) : (

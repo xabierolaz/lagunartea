@@ -302,7 +302,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
               <div>
                 <label className="block text-xs text-gray-500 mb-1">No Socios</label>
                 <div className="w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 text-center font-bold text-gray-600 text-sm">
-                  {Math.max(0, diners - memberDiners)}
+                  {Math.max(0, diners - (typeof memberDiners === 'number' ? memberDiners : 0))}
                 </div>
               </div>
             </div>
