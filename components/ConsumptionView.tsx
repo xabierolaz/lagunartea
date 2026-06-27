@@ -1,9 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { Consumption, Item, Member } from '../types';
 
+const generateId = () =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+
 interface Props {
   consumptions: Consumption[];
-  onAdd: (c: Consumption) => void;
+  onAdd: (c: Consumption) => Promise<void>;
   items: Item[];
   members?: Member[];
   onDelete?: (id: string) => void;
@@ -13,7 +18,7 @@ interface Props {
 export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, members = [], onDelete, isAdmin = false }) => {
   const [memberId, setMemberId] = useState<number | ''>('');
   const [cart, setCart] = useState<Record<string, number>>({});
-  const generateId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleIncrement = (id: string) => {
     setCart(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
@@ -39,7 +44,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
     return sum + (item?.price || 0) * (count as number);
   }, 0);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!memberId) return alert('Por favor, selecciona un socio.');
     if (totalAmount === 0) return alert('No has seleccionado ninguna bebida ni cuota.');
 
@@ -51,20 +56,30 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
     
     const description = descriptionItems.join(', ');
 
-    onAdd({
-      id: generateId(),
-      memberId: Number(memberId),
-      amount: totalAmount,
-      description,
-      date: new Date().toISOString(),
-      createdAt: Date.now()
-    });
+    const now = new Date();
 
-    // Reset
-    setCart({});
-    // We keep the member selected so they can see their new entry immediately
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    alert('Gasto guardado correctamente');
+    setIsSubmitting(true);
+    try {
+      await onAdd({
+        id: generateId(),
+        memberId: Number(memberId),
+        amount: totalAmount,
+        description,
+        date: now.toISOString(),
+        createdAt: now.getTime()
+      });
+
+      // Reset
+      setCart({});
+      // We keep the member selected so they can see their new entry immediately
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      alert('Gasto guardado correctamente');
+    } catch (error) {
+      console.error('Error saving consumption:', error);
+      alert('No se ha podido guardar el gasto. Revisa la conexión e inténtalo de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // History & Filter Logic (Grouped)
@@ -137,7 +152,7 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
           onChange={e => setMemberId(Number(e.target.value))}
         >
           <option value="" disabled>Seleccionar socio...</option>
-          {members.sort((a,b) => a.lastName.localeCompare(b.lastName)).map(m => (
+          {[...members].sort((a,b) => a.lastName.localeCompare(b.lastName)).map(m => (
             <option key={m.id} value={m.id}>{m.lastName}, {m.firstName}</option>
           ))}
         </select>
@@ -174,9 +189,10 @@ export const ConsumptionView: React.FC<Props> = ({ consumptions, onAdd, items, m
             </div>
             <button 
               onClick={handleSubmit}
-              className="w-full btn-primary py-3.5 rounded-xl font-bold text-lg shadow-md active:transform active:translate-y-0.5 transition-all bg-primary text-white hover:bg-opacity-90"
+              disabled={isSubmitting}
+              className="w-full btn-primary py-3.5 rounded-xl font-bold text-lg shadow-md active:transform active:translate-y-0.5 transition-all bg-primary text-white hover:bg-opacity-90 disabled:opacity-60 disabled:cursor-wait"
             >
-              Confirmar Gasto
+              {isSubmitting ? 'Guardando...' : 'Confirmar Gasto'}
             </button>
           </div>
         </div>

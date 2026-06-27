@@ -1,6 +1,49 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Consumption, Reservation, Member, Item } from '../types';
+import { ComedorSpace, Consumption, Reservation, Member, Item, KitchenService, ResourceType } from '../types';
+
+interface DbMember {
+  id: number;
+  first_name?: string | null;
+  firstName?: string | null;
+  last_name?: string | null;
+  lastName?: string | null;
+  phone: string | null;
+}
+
+interface DbReservation {
+  id: string;
+  member_id: number;
+  date: string;
+  start_time: string;
+  type: ResourceType;
+  diners?: number;
+  member_diners?: number;
+  space?: ComedorSpace | null;
+  spaces?: ComedorSpace[] | null;
+  kitchen_services?: KitchenService[] | null;
+  light_included?: boolean;
+  created_at: number;
+}
+
+interface DbConsumption {
+  id: string;
+  member_id: number;
+  date: string;
+  amount: number;
+  description: string;
+  created_at: number;
+}
+
+interface DbItem {
+  id: string;
+  name: string;
+  icon?: string | null;
+  price: number | string;
+  category: string;
+  sort_order?: number | null;
+  created_at?: string | number;
+}
 
 // Configuración estricta de Supabase: sin fallback local
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -11,6 +54,19 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
+
+const throwOnError = (action: string, error: unknown) => {
+  if (!error) return;
+
+  console.error(`${action}:`, error);
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as { message: unknown }).message)
+        : 'Operación fallida en Supabase';
+  throw new Error(message);
+};
 
 export const StorageService = {
   // --- Members ---
@@ -25,10 +81,10 @@ export const StorageService = {
       return [];
     }
     
-    return data.map((m: any) => ({
+    return data.map((m: DbMember) => ({
       id: m.id,
-      firstName: m.first_name || m.firstName,
-      lastName: m.last_name || m.lastName,
+      firstName: m.first_name || m.firstName || '',
+      lastName: m.last_name || m.lastName || '',
       phone: m.phone
     }));
   },
@@ -42,7 +98,7 @@ export const StorageService = {
     };
 
     const { error } = await supabase.from('members').insert(payload);
-    if (error) console.error('Error adding member:', error);
+    throwOnError('Error adding member', error);
   },
 
   updateMember: async (member: Member): Promise<void> => {
@@ -53,12 +109,12 @@ export const StorageService = {
     };
 
     const { error } = await supabase.from('members').update(payload).eq('id', member.id);
-    if (error) console.error('Error updating member:', error);
+    throwOnError('Error updating member', error);
   },
 
   deleteMember: async (memberId: number): Promise<void> => {
     const { error } = await supabase.from('members').delete().eq('id', memberId);
-    if (error) console.error('Error deleting member:', error);
+    throwOnError('Error deleting member', error);
   },
 
   // --- Reservations ---
@@ -73,7 +129,7 @@ export const StorageService = {
       return [];
     }
 
-    return data.map((r: any) => ({
+    return data.map((r: DbReservation) => ({
       id: r.id,
       memberId: r.member_id,
       date: r.date,
@@ -105,12 +161,12 @@ export const StorageService = {
     };
 
     const { error } = await supabase.from('reservations').insert(dbPayload);
-    if (error) console.error('Error adding reservation:', error);
+    throwOnError('Error adding reservation', error);
   },
 
   removeReservation: async (id: string): Promise<void> => {
     const { error } = await supabase.from('reservations').delete().eq('id', id);
-    if (error) console.error('Error removing reservation:', error);
+    throwOnError('Error removing reservation', error);
   },
 
   // --- Consumptions ---
@@ -124,7 +180,7 @@ export const StorageService = {
       return [];
     }
 
-    return data.map((c: any) => ({
+    return data.map((c: DbConsumption) => ({
       id: c.id,
       memberId: c.member_id,
       date: c.date,
@@ -145,12 +201,12 @@ export const StorageService = {
     };
 
     const { error } = await supabase.from('consumptions').insert(dbPayload);
-    if (error) console.error('Error adding consumption:', error);
+    throwOnError('Error adding consumption', error);
   },
 
   removeConsumption: async (id: string): Promise<void> => {
     const { error } = await supabase.from('consumptions').delete().eq('id', id);
-    if (error) console.error('Error removing consumption:', error);
+    throwOnError('Error removing consumption', error);
   },
 
   // --- Items ---
@@ -165,7 +221,7 @@ export const StorageService = {
       return [];
     }
 
-    return data.map((it: any) => ({
+    return data.map((it: DbItem) => ({
       id: it.id,
       name: it.name,
       icon: it.icon,
@@ -186,7 +242,7 @@ export const StorageService = {
       sort_order: item.sortOrder ?? 0
     };
     const { error } = await supabase.from('items').insert(payload);
-    if (error) console.error('Error adding item:', error);
+    throwOnError('Error adding item', error);
   },
 
   updateItem: async (item: Item): Promise<void> => {
@@ -198,11 +254,11 @@ export const StorageService = {
       sort_order: item.sortOrder ?? 0
     };
     const { error } = await supabase.from('items').update(payload).eq('id', item.id);
-    if (error) console.error('Error updating item:', error);
+    throwOnError('Error updating item', error);
   },
 
   deleteItem: async (itemId: string): Promise<void> => {
     const { error } = await supabase.from('items').delete().eq('id', itemId);
-    if (error) console.error('Error deleting item:', error);
+    throwOnError('Error deleting item', error);
   }
 };

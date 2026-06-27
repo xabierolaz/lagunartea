@@ -1,10 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ComedorSpace, KitchenService, Reservation, ResourceType, Consumption, Item, Member } from '../types';
+
+const generateId = () =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
 
 interface Props {
   date: string; // YYYY-MM-DD
-  onSave: (res: Reservation, consumption?: Consumption) => void;
+  onSave: (res: Reservation, consumption?: Consumption) => Promise<void>;
   onCancel: () => void;
   members: Member[];
   items: Item[];
@@ -13,8 +18,6 @@ interface Props {
 const MEAL_TYPES = ['Almuerzo', 'Comida', 'Cena'];
 
 export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, members, items }) => {
-  const generateId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
-
   const [type, setType] = useState<ResourceType>(ResourceType.Comedor);
   const [memberId, setMemberId] = useState<number | ''>('');
   // Para Comedor usamos el nombre del turno, para Frontón la hora
@@ -24,16 +27,10 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
   const [diners, setDiners] = useState<number>(4);
   const [memberDiners, setMemberDiners] = useState<number | ''>(1);
   const [lightIncluded, setLightIncluded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [spaces, setSpaces] = useState<ComedorSpace[]>([]);
   const [selectedServices, setSelectedServices] = useState<KitchenService[]>([]);
-
-  // Validar que los comensales socios no superen el total
-  useEffect(() => {
-    if (memberDiners !== '' && memberDiners > diners) {
-      setMemberDiners(diners);
-    }
-  }, [diners, memberDiners]);
 
   const calculateCost = () => {
     let total = 0;
@@ -57,12 +54,14 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
     return total;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const memberCount = typeof memberDiners === 'number' ? memberDiners : 0;
     if (!memberId) return alert('Selecciona un socio');
     if (type === ResourceType.Comedor && spaces.length === 0) return alert('Selecciona al menos un espacio');
     if (type === ResourceType.Comedor && memberCount < 1) return alert('Debe haber al menos un socio.');
+
+    const now = new Date();
 
     const newRes: Reservation = {
       id: generateId(),
@@ -75,7 +74,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
       spaces: type === ResourceType.Comedor ? spaces : undefined,
       kitchenServices: type === ResourceType.Comedor ? selectedServices : undefined,
       lightIncluded: type === ResourceType.Fronton ? lightIncluded : undefined,
-      createdAt: Date.now()
+      createdAt: now.getTime()
     };
 
     // Crear consumo asociado
@@ -94,14 +93,22 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
       consumption = {
         id: generateId(),
         memberId: Number(memberId),
-        date: new Date().toISOString(),
+        date: now.toISOString(),
         amount: cost,
         description: desc,
-        createdAt: Date.now()
+        createdAt: now.getTime()
       };
     }
 
-    onSave(newRes, consumption);
+    setIsSubmitting(true);
+    try {
+      await onSave(newRes, consumption);
+    } catch (error) {
+      console.error('Error saving reservation:', error);
+      alert('No se ha podido guardar la reserva. Revisa la conexión e inténtalo de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleTypeChange = (newType: ResourceType) => {
@@ -169,7 +176,7 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
           required
         >
           <option value="" disabled>Seleccionar socio...</option>
-          {members.sort((a,b) => a.lastName.localeCompare(b.lastName)).map(m => (
+          {[...members].sort((a,b) => a.lastName.localeCompare(b.lastName)).map(m => (
             <option key={m.id} value={m.id}>
               {m.lastName}, {m.firstName}
             </option>
@@ -273,7 +280,13 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
                 max="50" 
                 step="1" 
                 value={diners} 
-                onChange={e => setDiners(Number(e.target.value))}
+                onChange={e => {
+                  const nextDiners = Number(e.target.value);
+                  setDiners(nextDiners);
+                  setMemberDiners(prev =>
+                    typeof prev === 'number' ? Math.min(prev, nextDiners) : prev
+                  );
+                }}
                 className="w-full accent-primary h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
             </div>
@@ -361,9 +374,10 @@ export const ReservationForm: React.FC<Props> = ({ date, onSave, onCancel, membe
         </button>
         <button 
           type="submit"
-          className="flex-1 px-4 py-2 bg-primary text-white font-bold rounded-lg hover:bg-opacity-90 shadow-md"
+          disabled={isSubmitting}
+          className="flex-1 px-4 py-2 bg-primary text-white font-bold rounded-lg hover:bg-opacity-90 shadow-md disabled:opacity-60 disabled:cursor-wait"
         >
-          Confirmar
+          {isSubmitting ? 'Guardando...' : 'Confirmar'}
         </button>
       </div>
     </form>

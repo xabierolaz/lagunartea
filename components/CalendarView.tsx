@@ -74,8 +74,9 @@ export const CalendarView: React.FC<Props> = ({ reservations, onSelectDate, isAd
           const isPast = cellDate < today;
           const isTooFar = cellDate > maxBookableDate;
           
-          // Disable if past, OR if too far AND NOT admin
-          const isDisabled = isPast || (!isAdmin && isTooFar);
+          const hasReservations = items.length > 0;
+          // Past dates with reservations remain open for history lookup.
+          const isDisabled = (isPast && !hasReservations) || (!isAdmin && isTooFar);
 
           // Count types
           const comedorCount = items.filter(r => r.type === ResourceType.Comedor).length;
@@ -88,6 +89,8 @@ export const CalendarView: React.FC<Props> = ({ reservations, onSelectDate, isAd
               className={`min-h-[80px] p-1 relative flex flex-col transition-colors
                 ${isDisabled 
                   ? 'bg-gray-50 opacity-50 cursor-not-allowed' 
+                  : isPast
+                    ? 'bg-gray-50 cursor-pointer hover:bg-blue-50'
                   : 'bg-white cursor-pointer hover:bg-blue-50'
                 }
               `}

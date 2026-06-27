@@ -75,13 +75,18 @@ export const AdminPanel: React.FC<Props> = ({
       alert('Rellena nombre y apellidos');
       return;
     }
-    await onMemberAdd({
-      id: nextMemberId,
-      firstName: newMember.firstName,
-      lastName: newMember.lastName,
-      phone: newMember.phone || null
-    });
-    setNewMember({ firstName: '', lastName: '', phone: '' });
+    try {
+      await onMemberAdd({
+        id: nextMemberId,
+        firstName: newMember.firstName,
+        lastName: newMember.lastName,
+        phone: newMember.phone || null
+      });
+      setNewMember({ firstName: '', lastName: '', phone: '' });
+    } catch (error) {
+      console.error('Error adding member:', error);
+      alert('No se ha podido añadir el socio.');
+    }
   };
 
   const handleAddItemSubmit = async (e: React.FormEvent) => {
@@ -91,15 +96,65 @@ export const AdminPanel: React.FC<Props> = ({
       alert('Rellena ID, nombre y precio');
       return;
     }
-    await onItemAdd({
-      id,
-      name: newItem.name,
-      icon: newItem.icon || null,
-      price: Number(newItem.price),
-      category: newItem.category,
-      sortOrder: Number(newItem.sortOrder) || 0
-    });
-    setNewItem({ id: '', name: '', icon: '', price: '', category: 'bebida', sortOrder: '0' });
+    const price = Number(newItem.price);
+    if (!Number.isFinite(price)) {
+      alert('El precio debe ser un número válido');
+      return;
+    }
+    try {
+      await onItemAdd({
+        id,
+        name: newItem.name,
+        icon: newItem.icon || null,
+        price,
+        category: newItem.category,
+        sortOrder: Number(newItem.sortOrder) || 0
+      });
+      setNewItem({ id: '', name: '', icon: '', price: '', category: 'bebida', sortOrder: '0' });
+    } catch (error) {
+      console.error('Error adding item:', error);
+      alert('No se ha podido añadir el item.');
+    }
+  };
+
+  const saveMember = async (member: Member) => {
+    try {
+      await onMemberSave(member);
+    } catch (error) {
+      console.error('Error saving member:', error);
+      alert('No se ha podido guardar el socio.');
+    }
+  };
+
+  const deleteMember = async (memberId: number) => {
+    try {
+      await onMemberDelete(memberId);
+    } catch (error) {
+      console.error('Error deleting member:', error);
+      alert('No se ha podido eliminar el socio.');
+    }
+  };
+
+  const saveItem = async (item: Item) => {
+    if (!Number.isFinite(item.price)) {
+      alert('El precio debe ser un número válido');
+      return;
+    }
+    try {
+      await onItemSave(item);
+    } catch (error) {
+      console.error('Error saving item:', error);
+      alert('No se ha podido guardar el item.');
+    }
+  };
+
+  const deleteItem = async (itemId: string) => {
+    try {
+      await onItemDelete(itemId);
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      alert('No se ha podido eliminar el item.');
+    }
   };
 
   return (
@@ -135,8 +190,8 @@ export const AdminPanel: React.FC<Props> = ({
                 <input className="border px-2 py-1 rounded" value={m.firstName} onChange={e => handleMemberFieldChange(m.id, 'firstName', e.target.value)} />
                 <input className="border px-2 py-1 rounded" value={m.lastName} onChange={e => handleMemberFieldChange(m.id, 'lastName', e.target.value)} />
                 <input className="border px-2 py-1 rounded" value={m.phone || ''} onChange={e => handleMemberFieldChange(m.id, 'phone', e.target.value)} />
-                <button onClick={() => onMemberSave(m)} className="bg-primary text-white px-3 py-1 rounded text-sm font-semibold">Guardar</button>
-                <button onClick={() => onMemberDelete(m.id)} className="text-red-600 border border-red-200 px-3 py-1 rounded text-sm font-semibold bg-red-50">Eliminar</button>
+                <button onClick={() => saveMember(m)} className="bg-primary text-white px-3 py-1 rounded text-sm font-semibold">Guardar</button>
+                <button onClick={() => deleteMember(m.id)} className="text-red-600 border border-red-200 px-3 py-1 rounded text-sm font-semibold bg-red-50">Eliminar</button>
               </div>
             ))}
         </div>
@@ -196,8 +251,8 @@ export const AdminPanel: React.FC<Props> = ({
               </select>
               <input type="number" className="border px-2 py-1 rounded" value={it.sortOrder ?? 0} onChange={e => handleItemFieldChange(it.id, 'sortOrder', e.target.value)} />
               <div className="flex gap-2">
-                <button onClick={() => onItemSave(it)} className="bg-primary text-white px-3 py-1 rounded text-sm font-semibold">Guardar</button>
-                <button onClick={() => onItemDelete(it.id)} className="text-red-600 border border-red-200 px-3 py-1 rounded text-sm font-semibold bg-red-50">Eliminar</button>
+                <button onClick={() => saveItem(it)} className="bg-primary text-white px-3 py-1 rounded text-sm font-semibold">Guardar</button>
+                <button onClick={() => deleteItem(it.id)} className="text-red-600 border border-red-200 px-3 py-1 rounded text-sm font-semibold bg-red-50">Eliminar</button>
               </div>
             </div>
           ))}

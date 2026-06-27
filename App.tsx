@@ -57,13 +57,11 @@ const App: React.FC = () => {
   };
 
   const handleSaveReservation = async (res: Reservation, consumption?: Consumption) => {
-    const promises = [StorageService.addReservation(res)];
+    await StorageService.addReservation(res);
     if (consumption) {
-      promises.push(StorageService.addConsumption(consumption));
+      await StorageService.addConsumption(consumption);
     }
-    
-    await Promise.all(promises);
-    
+
     setIsBookingModalOpen(false);
     refreshData();
     
@@ -74,8 +72,13 @@ const App: React.FC = () => {
 
   const handleDeleteReservation = async (id: string) => {
     if(confirm("¿Estás seguro de eliminar esta reserva?")) {
-      await StorageService.removeReservation(id);
-      refreshData();
+      try {
+        await StorageService.removeReservation(id);
+        refreshData();
+      } catch (error) {
+        console.error('Error deleting reservation:', error);
+        alert('No se ha podido eliminar la reserva. Revisa la conexión e inténtalo de nuevo.');
+      }
     }
   };
 
@@ -86,8 +89,13 @@ const App: React.FC = () => {
 
   const handleDeleteConsumption = async (id: string) => {
     if (confirm('¿Eliminar este movimiento?')) {
-      await StorageService.removeConsumption(id);
-      refreshData();
+      try {
+        await StorageService.removeConsumption(id);
+        refreshData();
+      } catch (error) {
+        console.error('Error deleting consumption:', error);
+        alert('No se ha podido eliminar el movimiento. Revisa la conexión e inténtalo de nuevo.');
+      }
     }
   };
 
@@ -159,6 +167,19 @@ const App: React.FC = () => {
     if (!res.spaces || res.spaces.length === 0) return '';
     return res.spaces.join(', ');
   };
+
+  const isPastDate = (date: string) => {
+    const [year, month, day] = date.split('-').map(Number);
+    const selected = new Date(year, month - 1, day);
+    selected.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return selected < today;
+  };
+
+  const selectedDateIsPast = selectedDate ? isPastDate(selectedDate) : false;
 
   return (
     <div className="min-h-screen pb-20 relative">
@@ -275,12 +296,14 @@ const App: React.FC = () => {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h4 className="font-semibold text-gray-700">Reservas del día</h4>
-            <button 
-              onClick={() => setIsBookingModalOpen(true)}
-              className="bg-primary text-white px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-opacity-90 shadow-sm"
-            >
-              + Nueva
-            </button>
+            {!selectedDateIsPast && (
+              <button
+                onClick={() => setIsBookingModalOpen(true)}
+                className="bg-primary text-white px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-opacity-90 shadow-sm"
+              >
+                + Nueva
+              </button>
+            )}
           </div>
 
           {selectedDateReservations.length === 0 ? (
